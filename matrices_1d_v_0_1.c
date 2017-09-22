@@ -15,7 +15,7 @@
 #include <time.h>
 
 /* Initializes vector or matrix, sequentially, with indices. */
-void init_seq(double *a, const int n_rows_a, const int n_cols_a) {
+void init_seq(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
     for (size_t i = 0; i < n_rows_a; i++) {
         for (size_t j = 0; j < n_cols_a; j++) {
             a[i*n_cols_a + j] = i*n_cols_a + j;
@@ -24,7 +24,7 @@ void init_seq(double *a, const int n_rows_a, const int n_cols_a) {
 }
 
 /* Initializes vector or matrix, randomly. */
-void init_rand(double *a, const int n_rows_a, const int n_cols_a) {
+void init_rand(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
     for (size_t i = 0; i < n_rows_a; i++) {
         for (size_t j = 0; j < n_cols_a; j++) {
             a[i*n_cols_a + j] = rand() / (double)RAND_MAX;
@@ -33,7 +33,7 @@ void init_rand(double *a, const int n_rows_a, const int n_cols_a) {
 }
 
 /* Mean value of an array */
-double mean(const double *arr, const int size) {
+double mean(const double *arr, const unsigned size) {
     double sum = 0.;
     for (size_t i = 0; i < size; i++) {
         sum += arr[i];
@@ -43,7 +43,10 @@ double mean(const double *arr, const int size) {
 
 /* Dot product of two arrays, or matrix product
  * Allocates and returns an array. */
-double *dot(const double *a, const int n_rows_a, const int n_cols_a, const double *b, const int n_rows_b, const int n_cols_b) {
+double *dot(const double *a, const unsigned n_rows_a, const unsigned n_cols_a,\
+            const double *b, const unsigned n_rows_b, const unsigned n_cols_b) {
+
+    /* Check lengths of the input arrays */
     if (n_cols_a != n_rows_b) {
         printf("#columns A must be equal to #rows B!\n");
         system("pause");
@@ -74,8 +77,8 @@ double *dot(const double *a, const int n_rows_a, const int n_cols_a, const doubl
     the result in an array that it allocates and returns.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *add_arrays(const double *a, const int n_a, const double *b, const int n_b) {
-    /* Check lengths of both arrays, just in case. */
+double *add_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+    /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
         system("pause");
@@ -85,7 +88,7 @@ double *add_arrays(const double *a, const int n_a, const double *b, const int n_
     double *result = NULL;
 
     /* Size of result is maximum of n_a and n_b. */
-    int size = n_a > n_b ? n_a : n_b;
+    unsigned size = n_a > n_b ? n_a : n_b;
 
     /* Both a and b are scalars. */
     if (size == 0) {
@@ -135,8 +138,8 @@ double *add_arrays(const double *a, const int n_a, const double *b, const int n_
     the result in an array that it allocates and returns.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *subtract_arrays(const double *a, const int n_a, const double *b, const int n_b) {
-    /* Check lengths of both arrays, just in case. */
+double *subtract_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+    /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
         system("pause");
@@ -146,7 +149,7 @@ double *subtract_arrays(const double *a, const int n_a, const double *b, const i
     double *result = NULL;
 
     /* Size of result is maximum of n_a and n_b. */
-    int size = n_a > n_b ? n_a : n_b;
+    unsigned size = n_a > n_b ? n_a : n_b;
 
     /* Both a and b are scalars. */
     if (size == 0) {
@@ -196,8 +199,8 @@ double *subtract_arrays(const double *a, const int n_a, const double *b, const i
     the result in an array that it allocates and returns.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *multiply_arrays(const double *a, const int n_a, const double *b, const int n_b) {
-    /* Check lengths of both arrays, just in case. */
+double *multiply_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+    /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
         system("pause");
@@ -207,7 +210,7 @@ double *multiply_arrays(const double *a, const int n_a, const double *b, const i
     double *result = NULL;
 
     /* Size of result is maximum of n_a and n_b. */
-    int size = n_a > n_b ? n_a : n_b;
+    unsigned size = n_a > n_b ? n_a : n_b;
 
     /* Both a and b are scalars. */
     if (size == 0) {
@@ -257,8 +260,8 @@ double *multiply_arrays(const double *a, const int n_a, const double *b, const i
     the result in an array that it allocates and returns.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *divide_arrays(const double *a, const int n_a, const double *b, const int n_b) {
-    /* Check lengths of both arrays, just in case. */
+double *divide_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+    /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
         system("pause");
@@ -268,7 +271,7 @@ double *divide_arrays(const double *a, const int n_a, const double *b, const int
     double *result = NULL;
 
     /* Size of result is maximum of n_a and n_b. */
-    int size = n_a > n_b ? n_a : n_b;
+    unsigned size = n_a > n_b ? n_a : n_b;
 
     /* Both a and b are scalars. */
     if (size == 0) {
@@ -316,7 +319,7 @@ double *divide_arrays(const double *a, const int n_a, const double *b, const int
 
 /*  Allocates and returns a new matrix, which is a transpose of the input one.
     It's still flat in memory, i.e., 1-D. */
-double *transpose(const double *m, const int n_rows_m, const int n_cols_m) {
+double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_cols_m) {
     double *t = malloc(n_rows_m * n_cols_m * sizeof(*t));
     if (t == NULL) {
         printf("Couldn't allocate memory!\n");
@@ -346,7 +349,7 @@ double *transpose(const double *m, const int n_rows_m, const int n_cols_m) {
 }
 
 /* Prints vector, or matrix. */
-void print(const double *m, const int n_rows_m, const int n_cols_m) {
+void print(const double *m, const unsigned n_rows_m, const unsigned n_cols_m) {
     for (size_t i = 0; i < n_rows_m; i++) {
         for (size_t j = 0; j < n_cols_m; j++) {
             printf("%8.3f ", m[i*n_cols_m + j]);
@@ -361,13 +364,13 @@ void test() {
     const double two = 2.0;
     const double ten = 10.0;
 
-    const int n_rows_a = 4;
-    const int n_cols_a = 3;
-    const int n_rows_b = 3;
-    const int n_cols_b = 2;
+    const unsigned n_rows_a = 4;
+    const unsigned n_cols_a = 3;
+    const unsigned n_rows_b = 3;
+    const unsigned n_cols_b = 2;
 
-    const int n_rows_x = 4;
-    const int n_cols_x = 3;
+    const unsigned n_rows_x = 4;
+    const unsigned n_cols_x = 3;
 
     double *a = malloc(n_rows_a * n_cols_a * sizeof(*a));
     double *b = malloc(n_rows_b * n_cols_b * sizeof(*b));
