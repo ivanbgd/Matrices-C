@@ -45,6 +45,7 @@ double mean(const double *arr, const unsigned size) {
  * Returns an array that's passed in as the last argument, c. */
 double *dot(const double *a, const unsigned n_rows_a, const unsigned n_cols_a,\
             const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+
     /* Check lengths of the input arrays */
     if (n_cols_a != n_rows_b) {
         printf("#columns A must be equal to #rows B!\n");
@@ -230,6 +231,40 @@ double *divide_arrays(const double *a, const unsigned n_a, const double *b, cons
     return result;
 }
 
+/*  Updates an array, element-wise, by adding another array to it.
+    Takes both arrays in, and returns the updated one (the first one).
+    The return value (address of the first array) doesn't have to be used.
+    Arrays must be of the same length, or, the second one can be a scalar.
+    Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
+double *add_update(double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+    /* Check lengths of the input arrays */
+    if (n_a == 0) {
+        printf("'A' cannot be a scalar!\n");
+        system("pause");
+        exit(-2);
+    }
+    if ((n_a != n_b) && (n_b != 0)) {
+        printf("Length of A must be equal to length of B!\n");
+        system("pause");
+        exit(-2);
+    }
+
+    /* b is scalar */
+    if (n_b == 0) {
+        for (size_t i = 0; i < n_a; i++) {
+            a[i] += *b;
+        }
+    }
+    /* b is array */
+    else {
+        for (size_t i = 0; i < n_a; i++) {
+            a[i] += b[i];
+        }
+    }
+
+    return a;
+}
+
 /*  Takes and returns a new matrix, t, which is a transpose of the original one, m.
     It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
     of m, meaning, n_rows_t == n_cols_m, and n_cols_t == n_rows_m.
@@ -286,10 +321,11 @@ void test() {
     double *d = malloc(n_rows_a * n_cols_b * sizeof(*d));
     double *e = malloc(n_rows_a * n_cols_a * sizeof(*e));
     double *f = malloc(n_rows_a * n_cols_a * sizeof(*f));
+    double *g = malloc(n_rows_a * n_cols_a * sizeof(*g));
     double *x = malloc(n_rows_x * n_cols_x * sizeof(*x));
     double *y = malloc(n_rows_x * n_cols_x * sizeof(*y));
 
-    if (!a || !b || !c || !d || !e || !f || !x || !y) {
+    if (!a || !b || !c || !d || !e || !f || !g || !x || !y) {
         printf("Couldn't allocate memory!\a\n");
         system("pause");
         exit(-1);
@@ -309,6 +345,9 @@ void test() {
     e = divide_arrays(&one, 0, &ten, 0, e);                                 // shape (), that is, (1, 1)
     e = add_arrays(a, n_rows_a * n_cols_a, a, n_rows_a * n_cols_a, e);      // shape (4, 3)
     f = multiply_arrays(&two, 0, a, n_rows_a * n_cols_a, f);                // shape (4, 3)
+    memcpy(g, a, n_rows_a * n_cols_a * sizeof(*a));
+    add_update(g, n_rows_a * n_cols_a, &ten, 0);                            // shape (4, 3)
+    g = add_update(g, n_rows_a * n_cols_a, e, n_rows_a * n_cols_a);         // shape (4, 3)
 
     init_seq(x, n_rows_x, n_cols_x);                                        // shape (4, 3)
     transpose(x, n_rows_x, n_cols_x, y);                                    // shape (3, 4)
@@ -325,6 +364,8 @@ void test() {
     print(e, n_rows_a, n_cols_a);
     printf("Matrix F:\n");
     print(f, n_rows_a, n_cols_a);
+    printf("Matrix G:\n");
+    print(g, n_rows_a, n_cols_a);
 
     printf("Matrix X:\n");
     print(x, n_rows_x, n_cols_x);
@@ -337,6 +378,7 @@ void test() {
     free(d);
     free(e);
     free(f);
+    free(g);
     free(x);
     free(y);
 }
