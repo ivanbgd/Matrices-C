@@ -33,12 +33,12 @@ void init_rand(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
 }
 
 /* Mean value of an array */
-double mean(const double *arr, const unsigned size) {
+double mean(const double *arr, const unsigned length) {
     double sum = 0.;
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0; i < length; i++) {
         sum += arr[i];
     }
-    return sum / size;
+    return sum / length;
 }
 
 /* Dot product of two arrays, a and b, or matrix product
@@ -265,6 +265,94 @@ double *add_update(double *a, const unsigned n_a, const double *b, const unsigne
     return a;
 }
 
+/*  Compares two arrays element-wise, and puts the result in an array
+    that is passed in as the last argument, and also returns it.
+    If an element of array a is greater than a corresponding element of
+    array b, the resulting array will have 1.0 in that position;
+    it will have 0.0 otherwise.
+    Arrays must be of the same length, or, one of them, or both, can be scalars.
+    Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
+double *greater_than(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+    /* Check lengths of the input arrays */
+    if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
+        printf("Length of A must be equal to length of B!\n");
+        system("pause");
+        exit(-2);
+    }
+
+    /* Size of result is maximum of n_a and n_b. */
+    unsigned size = n_a > n_b ? n_a : n_b;
+
+    /* Both a and b are scalars. */
+    if (size == 0) {
+        result[0] = *a > *b;
+    }
+    /* Only a is scalar. */
+    else if (n_a == 0) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a > b[i];
+        }
+    }
+    /* Only b is scalar. */
+    else if (n_b == 0) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] > *b;
+        }
+    }
+    /* Neither a nor b are scalars. */
+    else {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] > b[i];
+        }
+    }
+
+    return result;
+}
+
+/*  Compares two arrays element-wise, and puts the result in an array
+    that is passed in as the last argument, and also returns it.
+    If an element of array a is equal to a corresponding element of
+    array b, the resulting array will have 1.0 in that position;
+    it will have 0.0 otherwise.
+    Arrays must be of the same length, or, one of them, or both, can be scalars.
+    Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
+double *equal(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+    /* Check lengths of the input arrays */
+    if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
+        printf("Length of A must be equal to length of B!\n");
+        system("pause");
+        exit(-2);
+    }
+
+    /* Size of result is maximum of n_a and n_b. */
+    unsigned size = n_a > n_b ? n_a : n_b;
+
+    /* Both a and b are scalars. */
+    if (size == 0) {
+        result[0] = *a == *b;
+    }
+    /* Only a is scalar. */
+    else if (n_a == 0) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a == b[i];
+        }
+    }
+    /* Only b is scalar. */
+    else if (n_b == 0) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] == *b;
+        }
+    }
+    /* Neither a nor b are scalars. */
+    else {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] == b[i];
+        }
+    }
+
+    return result;
+}
+
 /*  Takes and returns a new matrix, t, which is a transpose of the original one, m.
     It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
     of m, meaning, n_rows_t == n_cols_m, and n_cols_t == n_rows_m.
@@ -322,6 +410,8 @@ void test() {
     double *e = malloc(n_rows_a * n_cols_a * sizeof(*e));
     double *f = malloc(n_rows_a * n_cols_a * sizeof(*f));
     double *g = malloc(n_rows_a * n_cols_a * sizeof(*g));
+    double *h = malloc(n_rows_a * n_cols_a * sizeof(*h));
+    double *i = malloc(n_rows_a * n_cols_a * sizeof(*i));
     double *x = malloc(n_rows_x * n_cols_x * sizeof(*x));
     double *y = malloc(n_rows_x * n_cols_x * sizeof(*y));
 
@@ -348,9 +438,12 @@ void test() {
     memcpy(g, a, n_rows_a * n_cols_a * sizeof(*a));
     add_update(g, n_rows_a * n_cols_a, &ten, 0);                            // shape (4, 3)
     g = add_update(g, n_rows_a * n_cols_a, e, n_rows_a * n_cols_a);         // shape (4, 3)
-
-    init_seq(x, n_rows_x, n_cols_x);                                        // shape (4, 3)
-    transpose(x, n_rows_x, n_cols_x, y);                                    // shape (3, 4)
+    h = greater_than(&two, 0, &one, 0, h);                                  // shape (), that is, (1, 1)
+    h = greater_than(&one, 0, f, n_rows_a * n_cols_a, h);                   // shape (4, 3)
+    h = greater_than(f, n_rows_a * n_cols_a, &one, 0, h);                   // shape (4, 3)
+    init_rand(x, n_rows_x, n_cols_x);                                       // shape (4, 3)
+    h = greater_than(f, n_rows_a * n_cols_a, x, n_rows_x * n_cols_x, h);    // shape (4, 3)
+    i = equal(e, n_rows_a * n_cols_a, f, n_rows_a * n_cols_a, i);           // shape (4, 3)
 
     printf("Matrix A:\n");
     print(a, n_rows_a, n_cols_a);
@@ -366,11 +459,25 @@ void test() {
     print(f, n_rows_a, n_cols_a);
     printf("Matrix G:\n");
     print(g, n_rows_a, n_cols_a);
+    printf("Matrix X:\n");
+    print(x, n_rows_x, n_cols_x);
+    printf("Matrix H:\n");
+    print(h, n_rows_a, n_cols_a);
+    printf("Matrix I:\n");
+    print(i, n_rows_a, n_cols_a);
 
+    init_seq(x, n_rows_x, n_cols_x);                                        // shape (4, 3)
+    transpose(x, n_rows_x, n_cols_x, y);                                    // shape (3, 4)
+    free(i);
+    i = equal(x, n_rows_x * n_cols_x, &two, 0, i);                          // shape (4, 3)
+
+    printf("\n");
     printf("Matrix X:\n");
     print(x, n_rows_x, n_cols_x);
     printf("Matrix Y:\n");
     print(y, n_cols_x, n_rows_x);
+    printf("Matrix I:\n");
+    print(i, n_rows_a, n_cols_a);
 
     free(a);
     free(b);
@@ -379,6 +486,8 @@ void test() {
     free(e);
     free(f);
     free(g);
+    free(h);
+    free(i);
     free(x);
     free(y);
 }
