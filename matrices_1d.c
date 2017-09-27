@@ -78,30 +78,27 @@ double *add_arrays(const double *a, const unsigned n_a, const double *b, const u
         exit(-2);
     }
 
-    /* Size of result is maximum of n_a and n_b. */
-    unsigned size = n_a > n_b ? n_a : n_b;
-
-    /* Both a and b are scalars. */
-    if (size == 0) {
-        result[0] = *a + *b;
-    }
-    /* Only a is scalar. */
-    else if (n_a == 0) {
-        for (size_t i = 0; i < n_b; i++) {
-            result[i] = *a + b[i];
+    /* Neither a nor b are scalars. */
+    if ((n_a > 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] + b[i];
         }
     }
     /* Only b is scalar. */
-    else if (n_b == 0) {
+    else if ((n_b == 0) && (n_a > 0)) {
         for (size_t i = 0; i < n_a; i++) {
             result[i] = a[i] + *b;
         }
     }
-    /* Neither a nor b are scalars. */
-    else {
-        for (size_t i = 0; i < n_a; i++) {
-            result[i] = a[i] + b[i];
+    /* Only a is scalar. */
+    else if ((n_a == 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a + b[i];
         }
+    }
+    /* Both a and b are scalars. */
+    else {
+        result[0] = *a + *b;
     }
 
     return result;
@@ -119,31 +116,27 @@ double *subtract_arrays(const double *a, const unsigned n_a, const double *b, co
         exit(-2);
     }
 
-    /* Size of result is maximum of n_a and n_b. */
-    unsigned size = n_a > n_b ? n_a : n_b;
-
-    /* Both a and b are scalars. */
-    if (size == 0) {
-        result[0] = *a - *b;
-
-    }
-    /* Only a is scalar. */
-    else if (n_a == 0) {
-        for (size_t i = 0; i < n_b; i++) {
-            result[i] = *a - b[i];
+    /* Neither a nor b are scalars. */
+    if ((n_a > 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] - b[i];
         }
     }
     /* Only b is scalar. */
-    else if (n_b == 0) {
+    else if ((n_b == 0) && (n_a > 0)) {
         for (size_t i = 0; i < n_a; i++) {
             result[i] = a[i] - *b;
         }
     }
-    /* Neither a nor b are scalars. */
-    else {
-        for (size_t i = 0; i < n_a; i++) {
-            result[i] = a[i] - b[i];
+    /* Only a is scalar. */
+    else if ((n_a == 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a - b[i];
         }
+    }
+    /* Both a and b are scalars. */
+    else {
+        result[0] = *a - *b;
     }
     
     return result;
@@ -161,30 +154,27 @@ double *multiply_arrays(const double *a, const unsigned n_a, const double *b, co
         exit(-2);
     }
 
-    /* Size of result is maximum of n_a and n_b. */
-    unsigned size = n_a > n_b ? n_a : n_b;
-
-    /* Both a and b are scalars. */
-    if (size == 0) {
-        result[0] = *a * *b;
-    }
-    /* Only a is scalar. */
-    else if (n_a == 0) {
-        for (size_t i = 0; i < n_b; i++) {
-            result[i] = *a * b[i];
+    /* Neither a nor b are scalars. */
+    if ((n_a > 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] * b[i];
         }
     }
     /* Only b is scalar. */
-    else if (n_b == 0) {
+    else if ((n_b == 0) && (n_a > 0)) {
         for (size_t i = 0; i < n_a; i++) {
             result[i] = a[i] * *b;
         }
     }
-    /* Neither a nor b are scalars. */
-    else {
-        for (size_t i = 0; i < n_a; i++) {
-            result[i] = a[i] * b[i];
+    /* Only a is scalar. */
+    else if ((n_a == 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a * b[i];
         }
+    }
+    /* Both a and b are scalars. */
+    else {
+        result[0] = *a * *b;
     }
 
     return result;
@@ -202,30 +192,27 @@ double *divide_arrays(const double *a, const unsigned n_a, const double *b, cons
         exit(-2);
     }
 
-    /* Size of result is maximum of n_a and n_b. */
-    unsigned size = n_a > n_b ? n_a : n_b;
-
-    /* Both a and b are scalars. */
-    if (size == 0) {
-        result[0] = *a / *b;
-    }
-    /* Only a is scalar. */
-    else if (n_a == 0) {
-        for (size_t i = 0; i < n_b; i++) {
-            result[i] = *a / b[i];
+    /* Neither a nor b are scalars. */
+    if ((n_a > 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] / b[i];
         }
     }
     /* Only b is scalar. */
-    else if (n_b == 0) {
+    else if ((n_b == 0) && (n_a > 0)) {
         for (size_t i = 0; i < n_a; i++) {
             result[i] = a[i] / *b;
         }
     }
-    /* Neither a nor b are scalars. */
-    else {
-        for (size_t i = 0; i < n_a; i++) {
-            result[i] = a[i] / b[i];
+    /* Only a is scalar. */
+    else if ((n_a == 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a / b[i];
         }
+    }
+    /* Both a and b are scalars. */
+    else {
+        result[0] = *a / *b;
     }
 
     return result;
@@ -280,30 +267,27 @@ double *greater_than(const double *a, const unsigned n_a, const double *b, const
         exit(-2);
     }
 
-    /* Size of result is maximum of n_a and n_b. */
-    unsigned size = n_a > n_b ? n_a : n_b;
-
-    /* Both a and b are scalars. */
-    if (size == 0) {
-        result[0] = *a > *b;
-    }
-    /* Only a is scalar. */
-    else if (n_a == 0) {
-        for (size_t i = 0; i < n_b; i++) {
-            result[i] = *a > b[i];
+    /* Neither a nor b are scalars. */
+    if ((n_a > 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] > b[i];
         }
     }
     /* Only b is scalar. */
-    else if (n_b == 0) {
+    else if ((n_b == 0) && (n_a > 0)) {
         for (size_t i = 0; i < n_a; i++) {
             result[i] = a[i] > *b;
         }
     }
-    /* Neither a nor b are scalars. */
-    else {
-        for (size_t i = 0; i < n_a; i++) {
-            result[i] = a[i] > b[i];
+    /* Only a is scalar. */
+    else if ((n_a == 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a > b[i];
         }
+    }
+    /* Both a and b are scalars. */
+    else {
+        result[0] = *a > *b;
     }
 
     return result;
@@ -324,30 +308,27 @@ double *equal(const double *a, const unsigned n_a, const double *b, const unsign
         exit(-2);
     }
 
-    /* Size of result is maximum of n_a and n_b. */
-    unsigned size = n_a > n_b ? n_a : n_b;
-
-    /* Both a and b are scalars. */
-    if (size == 0) {
-        result[0] = *a == *b;
-    }
-    /* Only a is scalar. */
-    else if (n_a == 0) {
-        for (size_t i = 0; i < n_b; i++) {
-            result[i] = *a == b[i];
+    /* Neither a nor b are scalars. */
+    if ((n_a > 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_a; i++) {
+            result[i] = a[i] == b[i];
         }
     }
     /* Only b is scalar. */
-    else if (n_b == 0) {
+    else if ((n_b == 0) && (n_a > 0)) {
         for (size_t i = 0; i < n_a; i++) {
             result[i] = a[i] == *b;
         }
     }
-    /* Neither a nor b are scalars. */
-    else {
-        for (size_t i = 0; i < n_a; i++) {
-            result[i] = a[i] == b[i];
+    /* Only a is scalar. */
+    else if ((n_a == 0) && (n_b > 0)) {
+        for (size_t i = 0; i < n_b; i++) {
+            result[i] = *a == b[i];
         }
+    }
+    /* Both a and b are scalars. */
+    else {
+        result[0] = *a == *b;
     }
 
     return result;
@@ -468,7 +449,6 @@ void test() {
 
     init_seq(x, n_rows_x, n_cols_x);                                        // shape (4, 3)
     transpose(x, n_rows_x, n_cols_x, y);                                    // shape (3, 4)
-    free(i);
     i = equal(x, n_rows_x * n_cols_x, &two, 0, i);                          // shape (4, 3)
 
     printf("\n");
