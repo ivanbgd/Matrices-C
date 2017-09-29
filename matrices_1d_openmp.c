@@ -1,12 +1,12 @@
+#define MATRICES_1D_OPEN_MP
+#ifdef MATRICES_1D_OPEN_MP
+
 /*                  FINAL VERSION
  * Functions don't allocate arrays that they return. */
 
 /* Matrices are represented as 1-D arrays in memory.
  * That means they are contiguous in memory, flat arrays.
  * Minimum dimension is 1, not 0, and internal dimensions must match. */
-
-#define MATRICES_1D_OPEN_MP
-#ifdef MATRICES_1D_OPEN_MP
 
 #include <math.h>
 #include <omp.h>
@@ -529,12 +529,70 @@ void test() {
     free(y);
 }
 
+void test_speed() {
+    /* For measuring time */
+    double t0, t1;
+
+    const unsigned scale = 2000;
+    const unsigned n_rows_a = 4 * scale;
+    const unsigned n_cols_a = 3 * scale;
+    const unsigned n_rows_b = 4 * scale;
+    const unsigned n_cols_b = 3 * scale;
+
+    double *a = malloc(n_rows_a * n_cols_a * sizeof(*a));
+    double *b = malloc(n_rows_b * n_cols_b * sizeof(*b));
+    double *c = malloc(n_rows_a * n_cols_b * sizeof(*c));
+
+    if (!a || !b || !c) {
+        printf("Couldn't allocate memory!\n");
+        system("pause");
+        exit(-1);
+    }
+
+    puts("");
+    omp_set_num_threads(4);
+    printf("omp_get_num_procs %i\n", omp_get_num_procs());
+    printf("omp_get_max_threads %i\n", omp_get_max_threads());
+    puts("");
+
+    init_rand(a, n_rows_a, n_cols_a);
+    init_rand(b, n_rows_b, n_cols_b);
+    init_rand(c, n_rows_a, n_cols_a);
+
+    const unsigned loop = 100u;
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        c = multiply_arrays(a, n_rows_a * n_cols_a, c, n_rows_a * n_cols_a, c);
+    }
+    t1 = omp_get_wtime();
+    printf("multiply_arrays(): Elapsed time %.3f s\n", t1 - t0);
+
+    if (scale == 1) {
+        puts("");
+        printf("Matrix A:\n");
+        print(a, n_rows_a, n_cols_a);
+        printf("Matrix B:\n");
+        print(b, n_rows_b, n_cols_b);
+        printf("Matrix C:\n");
+        print(c, n_rows_a, n_cols_a);
+    }
+
+    a = multiply_arrays(c, n_rows_a * n_cols_a, b, n_rows_b * n_cols_b, a);
+
+    free(a);
+    free(b);
+    free(c);
+}
+
 int main(int argc, char *argv[]) {
     /* Intializes random number generator */
     time_t t;
     srand((unsigned)time(&t));
+    srand(0);
 
     test();
+    test_speed();
 
     system("pause");
     return(0);
