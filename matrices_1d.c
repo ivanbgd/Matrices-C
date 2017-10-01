@@ -42,9 +42,36 @@ double mean(const double *arr, const unsigned length) {
     return sum / length;
 }
 
+/*  Takes and returns a new matrix, t, which is a transpose of the original one, m.
+    It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
+    of m, meaning, n_rows_t == n_cols_m, and n_cols_t == n_rows_m.
+    The original matrix m stays intact. */
+double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_cols_m, double *t) {
+    for (size_t i = 0; i < n_rows_m; i++) {
+        for (size_t j = 0; j < n_cols_m; j++) {
+            t[j*n_rows_m + i] = m[i*n_cols_m + j];
+        }
+    }
+
+    /* Visual validation - Prints t like m, the original */
+    const int validate = 0;
+    if (validate) {
+        for (size_t i = 0; i < n_rows_m; i++) {
+            for (size_t j = 0; j < n_cols_m; j++) {
+                printf("%8.3f ", t[j*n_rows_m + i]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+
+    return t;
+}
+
 /* Dot product of two arrays, a and b, or matrix product
- * Returns an array that's passed in as the last argument, c. */
-double *dot(const double *a, const unsigned n_rows_a, const unsigned n_cols_a,\
+ * Returns an array that's passed in as the last argument, c.
+ * This is a slower version of the function. */
+double *dot_simple(const double *a, const unsigned n_rows_a, const unsigned n_cols_a,\
             const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
 
     /* Check lengths of the input arrays */
@@ -63,6 +90,38 @@ double *dot(const double *a, const unsigned n_rows_a, const unsigned n_cols_a,\
             c[i*n_cols_b + k] = sum;
         }
     }
+
+    return c;
+}
+
+/* Dot product of two arrays, a and b, or matrix product
+ * Returns an array that's passed in as the last argument, c.
+ * This is a faster version of the function. */
+double *dot(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
+    const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+
+    /* Check lengths of the input arrays */
+    if (n_cols_a != n_rows_b) {
+        printf("#columns A must be equal to #rows B!\n");
+        system("pause");
+        exit(-2);
+    }
+
+    double *bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
+
+    bt = transpose(b, n_rows_b, n_cols_b, bt);
+
+    for (size_t i = 0; i < n_rows_a; i++) {
+        for (size_t k = 0; k < n_cols_b; k++) {
+            double sum = 0.0;
+            for (size_t j = 0; j < n_cols_a; j++) {
+                sum += a[i*n_cols_a + j] * bt[k*n_rows_b + j];
+            }
+            c[i*n_cols_b + k] = sum;
+        }
+    }
+
+    free(bt);
 
     return c;
 }
@@ -335,32 +394,6 @@ double *equal(const double *a, const unsigned n_a, const double *b, const unsign
     return result;
 }
 
-/*  Takes and returns a new matrix, t, which is a transpose of the original one, m.
-    It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
-    of m, meaning, n_rows_t == n_cols_m, and n_cols_t == n_rows_m.
-    The original matrix m stays intact. */
-double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_cols_m, double *t) {
-    for (size_t i = 0; i < n_rows_m; i++) {
-        for (size_t j = 0; j < n_cols_m; j++) {
-            t[j*n_rows_m + i] = m[i*n_cols_m + j];
-        }
-    }
-
-    /* Visual validation - Prints t like m, the original */
-    const int validate = 0;
-    if (validate) {
-        for (size_t i = 0; i < n_rows_m; i++) {
-            for (size_t j = 0; j < n_cols_m; j++) {
-                printf("%8.3f ", t[j*n_rows_m + i]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-
-    return t;
-}
-
 /* Prints vector, or matrix. */
 void print(const double *m, const unsigned n_rows_m, const unsigned n_cols_m) {
     for (size_t i = 0; i < n_rows_m; i++) {
@@ -473,7 +506,7 @@ void test() {
     free(y);
 }
 
-void test_speed() {
+void test_speed_1() {
     /* For measuring time */
     double t0, t1;
 
@@ -525,6 +558,66 @@ void test_speed() {
     free(c);
 }
 
+void test_speed_2() {
+    /* For measuring time */
+    double t0, t1;
+
+    const unsigned scale = 200;
+    const unsigned n_rows_a = 4 * scale;
+    const unsigned n_cols_a = 3 * scale;
+    const unsigned n_rows_b = 3 * scale;
+    const unsigned n_cols_b = 2 * scale;
+
+    double *a = malloc(n_rows_a * n_cols_a * sizeof(*a));
+    double *b = malloc(n_rows_b * n_cols_b * sizeof(*b));
+    double *c = malloc(n_rows_a * n_cols_b * sizeof(*c));
+    double *d = malloc(n_rows_a * n_cols_b * sizeof(*d));
+
+    if (!a || !b || !c || !d) {
+        printf("Couldn't allocate memory!\n");
+        system("pause");
+        exit(-1);
+    }
+
+    puts("");
+
+    init_rand(a, n_rows_a, n_cols_a);
+    init_rand(b, n_rows_b, n_cols_b);
+
+    const unsigned loop = 100u;
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        c = dot_simple(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, c);
+    }
+    t1 = omp_get_wtime();
+    printf("dot_simple(): Elapsed time %.3f s\n", t1 - t0);
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        d = dot(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, d);
+    }
+    t1 = omp_get_wtime();
+    printf("dot(): Elapsed time %.3f s\n", t1 - t0);
+
+    if (scale == 1) {
+        puts("");
+        printf("Matrix A:\n");
+        print(a, n_rows_a, n_cols_a);
+        printf("Matrix B:\n");
+        print(b, n_rows_b, n_cols_b);
+        printf("Matrix C:\n");
+        print(c, n_rows_a, n_cols_b);
+        printf("Matrix D:\n");
+        print(d, n_rows_a, n_cols_b);
+    }
+
+    free(a);
+    free(b);
+    free(c);
+    free(d);
+}
+
 int main(int argc, char *argv[]) {
     /* Intializes random number generator */
     time_t t;
@@ -532,7 +625,7 @@ int main(int argc, char *argv[]) {
     srand(0);
 
     test();
-    test_speed();
+    test_speed_2();
 
     system("pause");
     return(0);
