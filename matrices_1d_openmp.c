@@ -82,7 +82,43 @@ double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_col
 }
 
 /* Dot product of two arrays, a and b, or matrix product
- * Returns an array that's passed in as the last argument, c. */
+ * Returns an array that's passed in as the last argument, c.
+ * This is a slower version of the function. */
+double *dot_simple(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
+    const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+
+    int i = 0, j = 0, k = 0;
+
+    /* Check lengths of the input arrays */
+    if (n_cols_a != n_rows_b) {
+        printf("#columns A must be equal to #rows B!\n");
+        system("pause");
+        exit(-2);
+    }
+
+    double *bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
+
+    bt = transpose(b, n_rows_b, n_cols_b, bt);
+
+#pragma omp parallel for default(none) private(i, j, k) shared(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, c, bt) schedule(static)
+    for (i = 0; i < (int)n_rows_a; i++) {
+        for (k = 0; k < (int)n_cols_b; k++) {
+            double sum = 0.0;
+            for (j = 0; j < (int)n_cols_a; j++) {
+                sum += a[i*n_cols_a + j] * bt[k*n_rows_b + j];
+            }
+            c[i*n_cols_b + k] = sum;
+        }
+    }
+
+    free(bt);
+
+    return c;
+}
+
+/* Dot product of two arrays, a and b, or matrix product
+ * Returns an array that's passed in as the last argument, c.
+ * This is a faster version of the function. */
 double *dot(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
     const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
 
@@ -529,7 +565,7 @@ void test() {
     free(y);
 }
 
-void test_speed() {
+void test_speed_1() {
     /* For measuring time */
     double t0, t1;
 
@@ -559,7 +595,7 @@ void test_speed() {
     init_rand(b, n_rows_b, n_cols_b);
     init_rand(c, n_rows_a, n_cols_a);
 
-    const unsigned loop = 100u;
+    const unsigned loop = 200u;
 
     t0 = omp_get_wtime();
     for (size_t i = 0; i < loop; i++) {
@@ -585,6 +621,66 @@ void test_speed() {
     free(c);
 }
 
+void test_speed_2() {
+    /* For measuring time */
+    double t0, t1;
+
+    const unsigned scale = 200;
+    const unsigned n_rows_a = 4 * scale;
+    const unsigned n_cols_a = 3 * scale;
+    const unsigned n_rows_b = 3 * scale;
+    const unsigned n_cols_b = 2 * scale;
+
+    double *a = malloc(n_rows_a * n_cols_a * sizeof(*a));
+    double *b = malloc(n_rows_b * n_cols_b * sizeof(*b));
+    double *c = malloc(n_rows_a * n_cols_b * sizeof(*c));
+    double *d = malloc(n_rows_a * n_cols_b * sizeof(*d));
+
+    if (!a || !b || !c || !d) {
+        printf("Couldn't allocate memory!\n");
+        system("pause");
+        exit(-1);
+    }
+
+    puts("");
+
+    init_rand(a, n_rows_a, n_cols_a);
+    init_rand(b, n_rows_b, n_cols_b);
+
+    const unsigned loop = 100u;
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        c = dot_simple(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, c);
+    }
+    t1 = omp_get_wtime();
+    printf("dot_simple(): Elapsed time %.3f s\n", t1 - t0);
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        d = dot(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, d);
+    }
+    t1 = omp_get_wtime();
+    printf("dot(): Elapsed time %.3f s\n", t1 - t0);
+
+    if (scale == 1) {
+        puts("");
+        printf("Matrix A:\n");
+        print(a, n_rows_a, n_cols_a);
+        printf("Matrix B:\n");
+        print(b, n_rows_b, n_cols_b);
+        printf("Matrix C:\n");
+        print(c, n_rows_a, n_cols_b);
+        printf("Matrix D:\n");
+        print(d, n_rows_a, n_cols_b);
+    }
+
+    free(a);
+    free(b);
+    free(c);
+    free(d);
+}
+
 int main(int argc, char *argv[]) {
     /* Intializes random number generator */
     time_t t;
@@ -592,7 +688,7 @@ int main(int argc, char *argv[]) {
     srand(0);
 
     test();
-    test_speed();
+    test_speed_2();
 
     system("pause");
     return(0);
