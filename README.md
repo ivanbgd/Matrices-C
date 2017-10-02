@@ -1,5 +1,5 @@
 # Matrices-C
-Matrix operations in C
+Matrix operations in C, sequential and parallel implementations
 
 ## Open MP
 ### gcc
