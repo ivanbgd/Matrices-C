@@ -10,8 +10,8 @@
 
 /* Function that calls other test functions */
 void test() {
-    test_0();
-    test_speed_4();
+    //test_0();
+    test_speed_2();
 }
 
 /* Simple basic tests */
