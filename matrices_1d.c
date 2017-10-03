@@ -1,4 +1,4 @@
-#define MATRICES_1D
+//#define MATRICES_1D
 #ifdef MATRICES_1D
 
 /*                  FINAL VERSION
@@ -158,7 +158,7 @@ data_ptr_res_t dot_simple(cdata_ptr_res_t a, const unsigned n_rows_a, const unsi
     }
 
     size_t i = 0, j = 0, k = 0;
-
+    
     for (i = 0; i < n_rows_a; i++) {
         for (k = 0; k < n_cols_b; k++) {
             data_t sum = 0.0;
@@ -211,7 +211,9 @@ data_ptr_res_t dot_simple_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, cons
 /* Dot product of two arrays, a and b, or matrix product
  * Returns an array that's passed in as the last argument, c.
  * This is a much faster version of the function.
- * It's the fastest one, sequential or Open MP. */
+ * Uses more memory than the simple version, for transposing matrix b, which
+ * can be a problem if the matrix is large - there might not be enough memory.
+ * It's the fastest one, sequential or Open MP, if we optimize for speed. */
 data_ptr_res_t dot_faster(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
     cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c) {
 
@@ -225,6 +227,12 @@ data_ptr_res_t dot_faster(cdata_ptr_res_t a, const unsigned n_rows_a, const unsi
     size_t i = 0, j = 0, k = 0;
 
     data_ptr_res_t bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
+
+    if (!bt) {
+        printf("Couldn't allocate memory!\n");
+        system("pause");
+        exit(-1);
+    }
 
     bt = transpose(b, n_rows_b, n_cols_b, bt);
 
@@ -245,8 +253,12 @@ data_ptr_res_t dot_faster(cdata_ptr_res_t a, const unsigned n_rows_a, const unsi
 
 /* Dot product of two arrays, a and b, or matrix product
  * Returns an array that's passed in as the last argument, c.
+ * Uses more memory than the simple version, for transposing matrix b, which
+ * can be a problem if the matrix is large - there might not be enough memory.
  * This was supposed to be the fastest version of the function,
- * but it's similar in speed to dot_simple_tiled. */
+ * but it's similar in speed to dot_simple_tiled, if we optimize for speed.
+ * But, if we optimize for the smallest code, this version is the fastest,
+ * though, not faster than dot_faster optimized for speed, but of the same speed as it. */
 data_ptr_res_t dot_faster_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
     cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c) {
 
@@ -260,6 +272,12 @@ data_ptr_res_t dot_faster_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, cons
     size_t i = 0, j = 0, k = 0, it = 0, jt = 0, kt = 0;
 
     data_ptr_res_t bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
+
+    if (!bt) {
+        printf("Couldn't allocate memory!\n");
+        system("pause");
+        exit(-1);
+    }
 
     bt = transpose(b, n_rows_b, n_cols_b, bt);
 

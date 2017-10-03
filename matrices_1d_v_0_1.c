@@ -1,4 +1,4 @@
-#define MATRICES_1D_V_0_1
+//#define MATRICES_1D_V_0_1
 #ifdef MATRICES_1D_V_0_1
 
 /*           INITIAL VERSION, v0.1

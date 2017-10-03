@@ -79,12 +79,16 @@ data_ptr_res_t dot_simple_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, cons
 /* Dot product of two arrays, a and b, or matrix product
  * Returns an array that's passed in as the last argument, c.
  * This is a much faster version of the function.
+ * Uses more memory than the simple version, for transposing matrix b, which
+ * can be a problem if the matrix is large - there might not be enough memory.
  * It's the fastest one, sequential or Open MP, if we optimize for speed. */
 data_ptr_res_t dot_faster(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
     cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c);
 
 /* Dot product of two arrays, a and b, or matrix product
  * Returns an array that's passed in as the last argument, c.
+ * Uses more memory than the simple version, for transposing matrix b, which
+ * can be a problem if the matrix is large - there might not be enough memory.
  * This was supposed to be the fastest version of the function,
  * but it's similar in speed to dot_simple_tiled, if we optimize for speed.
  * But, if we optimize for the smallest code, this version is the fastest,
