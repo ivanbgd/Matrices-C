@@ -8,13 +8,28 @@
  * That means they are contiguous in memory, flat arrays.
  * Minimum dimension is 1, not 0, and internal dimensions must match. */
 
-/* Uses tiles to speed up computations, by using cache efficiently. */
+/* Uses tiles to speed up computations, by using cache efficiently.
+ * This makes sense when working with matrices; in particular, with
+ * operations that traverse columns, like dot () and transpose() .*/
 
 #include "matrices_1d.h"
 #include "tests.h"
 
- /* Initializes vector or matrix with sequentially growing values. */
-void init_seq(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
+
+/* Initializes vector or matrix with sequentially growing values. */
+void init_seq(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
+    int i = 0, j = 0;
+
+#pragma omp parallel for default(none) private(i, j) shared(a, n_rows_a, n_cols_a) schedule(static)
+    for (i = 0; i < (int)n_rows_a; i++) {
+        for (j = 0; j < (int)n_cols_a; j++) {
+            a[i*n_cols_a + j] = i*n_cols_a + j;
+        }    
+    }
+}
+
+/* Initializes vector or matrix with sequentially growing values. */
+void init_seq_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
     int i = 0, j = 0, it = 0, jt = 0;
 
 #pragma omp parallel for default(none) private(i, j, it, jt) shared(a, n_rows_a, n_cols_a) schedule(static)
@@ -29,9 +44,25 @@ void init_seq(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
     }
 }
 
-/* Initializes vector or matrix, randomly.
-   Lot slower than init_seq(). */
-void init_rand(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
+/* Initializes vector or matrix, with random values in the range [0, 1].
+   Lot slower than init_seq(), which is expected, since it calls rand(). */
+void init_rand(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
+    int i = 0, j = 0;
+
+    /* Schedule should be either guided or dynamic; if it's static or runtime, the random numbers may repeat.
+       But, if working with tiles, it might not work with guided or dynamic, but also should have
+       less problems with repeating values. */
+#pragma omp parallel for default(none) private(i, j) shared(a, n_rows_a, n_cols_a) schedule(static)
+    for (i = 0; i < (int)n_rows_a; i++) {
+        for (j = 0; j < (int)n_cols_a; j++) {
+            a[i*n_cols_a + j] = rand() / (double)RAND_MAX;
+        }
+    }     
+}
+
+/* Initializes vector or matrix, with random values in the range [0, 1].
+   Lot slower than init_seq(), which is expected, since it calls rand(). */
+void init_rand_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
     int i = 0, j = 0, it = 0, jt = 0;
 
     /* Schedule should be either guided or dynamic; if it's static or runtime, the random numbers may repeat.
@@ -50,7 +81,20 @@ void init_rand(double *a, const unsigned n_rows_a, const unsigned n_cols_a) {
 }
 
 /* Sum of an array */
-double sum_array(const double *arr, const unsigned length) {
+double sum_array(cdata_ptr_res_t arr, const unsigned length) {
+    double sum = 0.;
+    int i = 0;
+
+#pragma omp parallel for default(none) private (i) shared(arr, length) reduction(+:sum) schedule(static)
+    for (i = 0; i < (int)length; i++) {
+        sum += arr[i];
+    }
+
+    return sum;
+}
+
+/* Sum of an array */
+double sum_array_tiled(cdata_ptr_res_t arr, const unsigned length) {
     double sum = 0.;
     int i = 0, it = 0;
 
@@ -60,20 +104,18 @@ double sum_array(const double *arr, const unsigned length) {
             sum += arr[it];
         }
     }
-    
+
     return sum;
 }
 
 /* Mean value of an array */
-double mean(const double *arr, const unsigned length) {
+double mean(cdata_ptr_res_t arr, const unsigned length) {
     double sum = 0.;
-    int i = 0, it = 0;
+    int i = 0;
 
-#pragma omp parallel for default(none) private (i, it) shared(arr, length) reduction(+:sum) schedule(static)
-    for (i = 0; i < (int)length; i += TILE_ORDER) {
-        for (it = i; it < MIN((int)length, i + TILE_ORDER); it++) {
-            sum += arr[it];
-        }
+#pragma omp parallel for default(none) private (i) shared(arr, length) reduction(+:sum) schedule(static)
+    for (i = 0; i < (int)length; i++) {
+        sum += arr[i];
     }
 
     return sum / length;
@@ -83,7 +125,7 @@ double mean(const double *arr, const unsigned length) {
     It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
     of m, meaning, n_rows_t == n_cols_m, and n_cols_t == n_rows_m.
     The original matrix m stays intact. */
-double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_cols_m, double *t) {
+data_ptr_res_t transpose(cdata_ptr_res_t m, const unsigned n_rows_m, const unsigned n_cols_m, data_ptr_res_t t) {
     int i = 0, j = 0, it = 0, jt = 0;
     
 #pragma omp parallel for default(none) private(i, j, it, jt) shared(m, n_rows_m, n_cols_m, t) schedule(static)
@@ -94,6 +136,23 @@ double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_col
                     t[jt*n_rows_m + it] = m[it*n_cols_m + jt];
                 }
             }
+        }
+    }
+
+    return t;
+}
+
+/*  Takes and returns a new matrix, t, which is a transpose of the original one, m.
+    It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
+    of m, meaning, n_rows_t == n_cols_m, and n_cols_t == n_rows_m.
+    The original matrix m stays intact. */
+data_ptr_res_t transpose_non_tiled(cdata_ptr_res_t m, const unsigned n_rows_m, const unsigned n_cols_m, data_ptr_res_t t) {
+    int i = 0, j = 0;
+    
+#pragma omp parallel for default(none) private(i, j) shared(m, n_rows_m, n_cols_m, t) schedule(static)
+    for (i = 0; i < (int)n_rows_m; i++) {
+        for (j = 0; j < (int)n_cols_m; j++) {
+            t[j*n_rows_m + i] = m[i*n_cols_m + j];
         }
     }
 
@@ -115,8 +174,8 @@ double *transpose(const double *m, const unsigned n_rows_m, const unsigned n_col
 /* Dot product of two arrays, a and b, or matrix product
  * Returns an array that's passed in as the last argument, c.
  * This is by far the slowest version of the function, sequentially or parallely. */
-double *dot_simple(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
-    const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+data_ptr_res_t dot_simple(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
+    cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c) {
 
     /* Check lengths of the input arrays */
     if (n_cols_a != n_rows_b) {
@@ -144,8 +203,8 @@ double *dot_simple(const double *a, const unsigned n_rows_a, const unsigned n_co
 /* Dot product of two arrays, a and b, or matrix product
  * Returns an array that's passed in as the last argument, c.
  * This is a tiled version of the simple function, and it's much faster than it. */
-double *dot_simple_tiled(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
-    const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+data_ptr_res_t dot_simple_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
+    cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c) {
 
     /* Check lengths of the input arrays */
     if (n_cols_a != n_rows_b) {
@@ -182,8 +241,8 @@ double *dot_simple_tiled(const double *a, const unsigned n_rows_a, const unsigne
  * Returns an array that's passed in as the last argument, c.
  * This is a much faster version of the function.
  * It's the fastest one, sequential or Open MP. */
-double *dot_faster(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
-    const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+data_ptr_res_t dot_faster(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
+    cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c) {
 
     /* Check lengths of the input arrays */
     if (n_cols_a != n_rows_b) {
@@ -194,7 +253,7 @@ double *dot_faster(const double *a, const unsigned n_rows_a, const unsigned n_co
 
     int i = 0, j = 0, k = 0;
 
-    double *bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
+    data_ptr_res_t bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
 
     bt = transpose(b, n_rows_b, n_cols_b, bt);
 
@@ -218,8 +277,8 @@ double *dot_faster(const double *a, const unsigned n_rows_a, const unsigned n_co
  * Returns an array that's passed in as the last argument, c.
  * This was supposed to be the fastest version of the function,
  * but it's similar in speed to dot_simple_tiled. */
-double *dot_faster_tiled(const double *a, const unsigned n_rows_a, const unsigned n_cols_a, \
-    const double *b, const unsigned n_rows_b, const unsigned n_cols_b, double *c) {
+data_ptr_res_t dot_faster_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a, \
+    cdata_ptr_res_t b, const unsigned n_rows_b, const unsigned n_cols_b, data_ptr_res_t c) {
 
     /* Check lengths of the input arrays */
     if (n_cols_a != n_rows_b) {
@@ -230,7 +289,7 @@ double *dot_faster_tiled(const double *a, const unsigned n_rows_a, const unsigne
 
     int i = 0, j = 0, k = 0, it = 0, jt = 0, kt = 0;
 
-    double *bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
+    data_ptr_res_t bt = malloc(n_rows_b * n_cols_b * sizeof(*b));
 
     bt = transpose(b, n_rows_b, n_cols_b, bt);
 
@@ -262,7 +321,7 @@ double *dot_faster_tiled(const double *a, const unsigned n_rows_a, const unsigne
     that is passed in as the last argument, and also returns it.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *add_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t add_arrays(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -305,7 +364,7 @@ double *add_arrays(const double *a, const unsigned n_a, const double *b, const u
     in an array that is passed in as the last argument, and also returns it.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *subtract_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t subtract_arrays(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -349,7 +408,7 @@ double *subtract_arrays(const double *a, const unsigned n_a, const double *b, co
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it).
     Tiled version is slightly slower in Open MP, and evidently slower sequentially. */
-double *multiply_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t multiply_arrays(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -393,7 +452,7 @@ double *multiply_arrays(const double *a, const unsigned n_a, const double *b, co
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it).
     Tiled version is slightly slower in Open MP, and evidently slower sequentially. */
-double *multiply_arrays_tiled(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t multiply_arrays_tiled(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -442,7 +501,7 @@ double *multiply_arrays_tiled(const double *a, const unsigned n_a, const double 
     that is passed in as the last argument, and also returns it.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *divide_arrays(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t divide_arrays(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -486,7 +545,7 @@ double *divide_arrays(const double *a, const unsigned n_a, const double *b, cons
     The return value (address of the first array) doesn't have to be used.
     Arrays must be of the same length, or, the second one can be a scalar.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *add_update(double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+data_ptr_res_t add_update(data_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b) {
     /* Check lengths of the input arrays */
     if (n_a == 0) {
         printf("'A' cannot be a scalar!\n");
@@ -526,7 +585,7 @@ double *add_update(double *a, const unsigned n_a, const double *b, const unsigne
     it will have 0.0 otherwise.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *greater_than(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t greater_than(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -572,7 +631,7 @@ double *greater_than(const double *a, const unsigned n_a, const double *b, const
     it will have 0.0 otherwise.
     Arrays must be of the same length, or, one of them, or both, can be scalars.
     Use 0 as the length of a scalar, and pass its address in (a pointer to it). */
-double *equal(const double *a, const unsigned n_a, const double *b, const unsigned n_b, double *result) {
+data_ptr_res_t equal(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b, data_ptr_res_t result) {
     /* Check lengths of the input arrays */
     if ((n_a != n_b) && (n_a != 0) && (n_b != 0)) {
         printf("Length of A must be equal to length of B!\n");
@@ -612,7 +671,7 @@ double *equal(const double *a, const unsigned n_a, const double *b, const unsign
 }
 
 /* Prints vector, or matrix. */
-void print(const double *m, const unsigned n_rows_m, const unsigned n_cols_m) {
+void print(cdata_ptr_res_t m, const unsigned n_rows_m, const unsigned n_cols_m) {
     for (size_t i = 0; i < n_rows_m; i++) {
         for (size_t j = 0; j < n_cols_m; j++) {
             printf("%8.3f ", m[i*n_cols_m + j]);
@@ -624,7 +683,7 @@ void print(const double *m, const unsigned n_rows_m, const unsigned n_cols_m) {
 
 /* Sequential function for comparing two arrays by using memcmp
    Returns 0 if contents of the arrays are the same; -1 or 1 otherwise. */
-int compare_memcmp(const double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+int compare_memcmp(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b) {
     /* Check lengths of the input arrays */
     if (n_a != n_b) {
         printf("Length of A must be equal to length of B!\n");
@@ -637,7 +696,7 @@ int compare_memcmp(const double *a, const unsigned n_a, const double *b, const u
 
 /* Sequential function for comparing two arrays by using a loop
    Returns 0 if contents of the arrays are the same; 1 otherwise. */
-int compare(const double *a, const unsigned n_a, const double *b, const unsigned n_b) {
+int compare(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsigned n_b) {
     /* Check lengths of the input arrays */
     if (n_a != n_b) {
         printf("Length of A must be equal to length of B!\n");
