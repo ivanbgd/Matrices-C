@@ -30,12 +30,12 @@ typedef const data_t * __restrict cdata_ptr_res_t;
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-/* Initializes vector or matrix with sequentially growing values.
+/* Initializes vector or matrix with sequentially growing data_t values, starting from 0.
    Tiled variant is slightly slower; larger diiference is sequentially. */
 void init_seq(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a);
 void init_seq_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a);
 
-/* Initializes vector or matrix, with random values in the range [0, 1].
+/* Initializes vector or matrix, with random data_t values in the range [0, 1].
    Lot slower than init_seq(), which is expected, since it calls rand().
    Tiled variant is slightly slower; larger diiference is sequentially. */
 void init_rand(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a);
@@ -44,11 +44,11 @@ void init_rand_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n
 /* Sum of an array
    Tiled and non-tiled variants are of similar speed,
    though larger diiference is sequentially. */
-double sum_array(cdata_ptr_res_t arr, const unsigned length);
-double sum_array_tiled(cdata_ptr_res_t arr, const unsigned length);
+data_t sum_array(cdata_ptr_res_t arr, const unsigned length);
+data_t sum_array_tiled(cdata_ptr_res_t arr, const unsigned length);
 
 /* Mean value of an array */
-double mean(cdata_ptr_res_t arr, const unsigned length);
+data_t mean(cdata_ptr_res_t arr, const unsigned length);
 
 /*  Takes and returns a new matrix, t, which is a transpose of the original one, m.
     It's also flat in memory, i.e., 1-D, but it should be looked at as a transpose
@@ -147,6 +147,6 @@ int compare(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsi
 
 /* Compares two scalars within a given TOLERANCE
    Returns 0 if contents of the arrays are the same; 1 otherwise. */
-int compare_scalars(const double a, const double b);
+int compare_scalars(const data_t a, const data_t b);
 
 #endif // ! MATRICES_1D_INCLUDE
