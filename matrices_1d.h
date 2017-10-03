@@ -1,6 +1,13 @@
 #ifndef MATRICES_1D_HEADER
 #define MATRICES_1D_HEADER
 
+/* All functions use restricted pointers, so care should be taken
+ * to make sure that arrays that they point to do not overlap, if
+ * we want to modify them inside of the functions.
+ * On the other hand, it's easy to change type of the pointers
+ * from restricted to non-restricted versions, by using definitions
+ * given at the beginning of this header file, if necessary. */
+
 #include <math.h>
 #include <omp.h>
 #include <stdio.h>
