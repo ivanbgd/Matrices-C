@@ -8,15 +8,23 @@
  * That means they are contiguous in memory, flat arrays.
  * Minimum dimension is 1, not 0, and internal dimensions must match. */
 
+/* All functions use restricted pointers, so care should be taken
+ * to make sure that arrays that they point to do not overlap, if
+ * we want to modify them inside of the functions.
+ * On the other hand, it's easy to change type of the pointers
+ * from restricted to non-restricted versions, by using definitions
+ * given at the beginning of the corresponding "matrices_1d.h"
+ * header file, if necessary. */
+
 /* Uses tiles to speed up computations, by using cache efficiently.
  * This makes sense when working with matrices; in particular, with
- * operations that traverse columns, like dot () and transpose() .*/
+ * operations that traverse columns, like dot () and transpose(). */
 
 #include "matrices_1d.h"
 #include "tests.h"
 
 
-/* Initializes vector or matrix with sequentially growing values. */
+/* Initializes vector or matrix with sequentially growing data_t values, starting from 0. */
 void init_seq(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
     int i = 0, j = 0;
 
@@ -28,7 +36,7 @@ void init_seq(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a
     }
 }
 
-/* Initializes vector or matrix with sequentially growing values. */
+/* Initializes vector or matrix with sequentially growing data_t values, starting from 0. */
 void init_seq_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
     int i = 0, j = 0, it = 0, jt = 0;
 
@@ -44,7 +52,7 @@ void init_seq_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_
     }
 }
 
-/* Initializes vector or matrix, with random values in the range [0, 1].
+/* Initializes vector or matrix, with random data_t values in the range [0, 1].
    Lot slower than init_seq(), which is expected, since it calls rand(). */
 void init_rand(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
     int i = 0, j = 0;
@@ -55,12 +63,12 @@ void init_rand(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_
 #pragma omp parallel for default(none) private(i, j) shared(a, n_rows_a, n_cols_a) schedule(static)
     for (i = 0; i < (int)n_rows_a; i++) {
         for (j = 0; j < (int)n_cols_a; j++) {
-            a[i*n_cols_a + j] = rand() / (double)RAND_MAX;
+            a[i*n_cols_a + j] = rand() / (data_t)RAND_MAX;
         }
     }     
 }
 
-/* Initializes vector or matrix, with random values in the range [0, 1].
+/* Initializes vector or matrix, with random data_t values in the range [0, 1].
    Lot slower than init_seq(), which is expected, since it calls rand(). */
 void init_rand_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n_cols_a) {
     int i = 0, j = 0, it = 0, jt = 0;
@@ -73,7 +81,7 @@ void init_rand_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n
         for (j = 0; j < (int)n_cols_a; j += TILE_ORDER) {
             for (it = i; it < MIN((int)n_rows_a, i + TILE_ORDER); it++) {
                 for (jt = j; jt < MIN((int)n_cols_a, j + TILE_ORDER); jt++) {
-                    a[it*n_cols_a + jt] = rand() / (double)RAND_MAX;
+                    a[it*n_cols_a + jt] = rand() / (data_t)RAND_MAX;
                 }
             }
         }
@@ -81,8 +89,8 @@ void init_rand_tiled(data_ptr_res_t a, const unsigned n_rows_a, const unsigned n
 }
 
 /* Sum of an array */
-double sum_array(cdata_ptr_res_t arr, const unsigned length) {
-    double sum = 0.;
+data_t sum_array(cdata_ptr_res_t arr, const unsigned length) {
+    data_t sum = 0.;
     int i = 0;
 
 #pragma omp parallel for default(none) private (i) shared(arr, length) reduction(+:sum) schedule(static)
@@ -94,8 +102,8 @@ double sum_array(cdata_ptr_res_t arr, const unsigned length) {
 }
 
 /* Sum of an array */
-double sum_array_tiled(cdata_ptr_res_t arr, const unsigned length) {
-    double sum = 0.;
+data_t sum_array_tiled(cdata_ptr_res_t arr, const unsigned length) {
+    data_t sum = 0.;
     int i = 0, it = 0;
 
 #pragma omp parallel for default(none) private (i, it) shared(arr, length) reduction(+:sum) schedule(static)
@@ -109,8 +117,8 @@ double sum_array_tiled(cdata_ptr_res_t arr, const unsigned length) {
 }
 
 /* Mean value of an array */
-double mean(cdata_ptr_res_t arr, const unsigned length) {
-    double sum = 0.;
+data_t mean(cdata_ptr_res_t arr, const unsigned length) {
+    data_t sum = 0.;
     int i = 0;
 
 #pragma omp parallel for default(none) private (i) shared(arr, length) reduction(+:sum) schedule(static)
@@ -189,7 +197,7 @@ data_ptr_res_t dot_simple(cdata_ptr_res_t a, const unsigned n_rows_a, const unsi
 #pragma omp parallel for default(none) private(i, j, k) shared(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, c) schedule(static)
     for (i = 0; i < (int)n_rows_a; i++) {
         for (k = 0; k < (int)n_cols_b; k++) {
-            double sum = 0.0;
+            data_t sum = 0.0;
             for (j = 0; j < (int)n_cols_a; j++) {
                 sum += a[i*n_cols_a + j] * b[j*n_cols_b + k];
             }
@@ -223,7 +231,7 @@ data_ptr_res_t dot_simple_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, cons
             for (j = 0; j < (int)n_cols_a; j += TILE_ORDER) {
                 for (it = i; it < MIN((int)n_rows_a, i + TILE_ORDER); it++) {
                     for (kt = k; kt < MIN((int)n_cols_b, k + TILE_ORDER); kt++) {
-                        double sum = 0.0;
+                        data_t sum = 0.0;
                         for (jt = j; jt < MIN((int)n_cols_a, j + TILE_ORDER); jt++) {
                             sum += a[it*n_cols_a + jt] * b[jt*n_cols_b + kt];
                         }
@@ -260,7 +268,7 @@ data_ptr_res_t dot_faster(cdata_ptr_res_t a, const unsigned n_rows_a, const unsi
 #pragma omp parallel for default(none) private(i, j, k) shared(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, c, bt) schedule(static)
     for (i = 0; i < (int)n_rows_a; i++) {
         for (k = 0; k < (int)n_cols_b; k++) {
-            double sum = 0.0;
+            data_t sum = 0.0;
             for (j = 0; j < (int)n_cols_a; j++) {
                 sum += a[i*n_cols_a + j] * bt[k*n_rows_b + j];
             }
@@ -301,7 +309,7 @@ data_ptr_res_t dot_faster_tiled(cdata_ptr_res_t a, const unsigned n_rows_a, cons
             for (j = 0; j < (int)n_cols_a; j += TILE_ORDER) {
                 for (it = i; it < MIN((int)n_rows_a, i + TILE_ORDER); it++) {
                     for (kt = k; kt < MIN((int)n_cols_b, k + TILE_ORDER); kt++) {
-                        double sum = 0.0;
+                        data_t sum = 0.0;
                         for (jt = j; jt < MIN((int)n_cols_a, j + TILE_ORDER); jt++) {
                             sum += a[it*n_cols_a + jt] * bt[kt*n_rows_b + jt];
                         }
@@ -715,7 +723,7 @@ int compare(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsi
 
 /* Compares two scalars within a given TOLERANCE
    Returns 0 if contents of the arrays are the same; 1 otherwise. */
-int compare_scalars(const double a, const double b) {
+int compare_scalars(const data_t a, const data_t b) {
     if (fabs(a - b) > TOLERANCE) {
         return 1;
     }
