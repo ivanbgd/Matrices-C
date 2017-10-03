@@ -1,5 +1,5 @@
-#ifndef MATRICES_1D_INCLUDE
-#define MATRICES_1D_INCLUDE
+#ifndef MATRICES_1D_HEADER
+#define MATRICES_1D_HEADER
 
 #include <math.h>
 #include <omp.h>
@@ -149,4 +149,4 @@ int compare(cdata_ptr_res_t a, const unsigned n_a, cdata_ptr_res_t b, const unsi
    Returns 0 if contents of the arrays are the same; 1 otherwise. */
 int compare_scalars(const data_t a, const data_t b);
 
-#endif // ! MATRICES_1D_INCLUDE
+#endif // ! MATRICES_1D_HEADER
