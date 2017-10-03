@@ -3,7 +3,7 @@
 /* Function that calls other test functions */
 void test() {
     //test_0();
-    test_speed_1();
+    test_speed_4();
 }
 
 /* Simple basic tests */
@@ -92,7 +92,7 @@ void test_0() {
 
     printf("\n");
     printf("Sum of A: %f\n", sum_array(a, n_rows_a * n_cols_a));
-    printf("Mean of A: %f\n", mean(a, n_rows_a * n_cols_a));
+    printf("Mean of A:        %f\n", mean(a, n_rows_a * n_cols_a));
     printf("Mean of A by sum: %f\n", sum_array(a, n_rows_a * n_cols_a) / (n_rows_a * n_cols_a));
 
     init_seq(x, n_rows_x, n_cols_x);                                        // shape (4, 3)
@@ -165,7 +165,7 @@ void test_speed_1() {
         //c = multiply_arrays(a, n_rows_a * n_cols_a, &x, 0, c);
     }
     t1 = omp_get_wtime();
-    printf("multiply_arrays(): Elapsed time %.3f s\n", t1 - t0);
+    printf("multiply_arrays():       Elapsed time %.3f s\n", t1 - t0);
 
     t0 = omp_get_wtime();
     for (size_t i = 0; i < loop; i++) {
@@ -250,7 +250,7 @@ void test_speed_2() {
         c = dot_simple(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, c);
     }
     t1 = omp_get_wtime();
-    printf("dot_simple(): Elapsed time %.3f s\n", t1 - t0);
+    printf("dot_simple():       Elapsed time %.3f s\n", t1 - t0);
 
     t0 = omp_get_wtime();
     for (size_t i = 0; i < loop; i++) {
@@ -264,7 +264,7 @@ void test_speed_2() {
         e = dot_faster(a, n_rows_a, n_cols_a, b, n_rows_b, n_cols_b, e);
     }
     t1 = omp_get_wtime();
-    printf("dot_faster(): Elapsed time %.3f s\n", t1 - t0);
+    printf("dot_faster():       Elapsed time %.3f s\n", t1 - t0);
 
     t0 = omp_get_wtime();
     for (size_t i = 0; i < loop; i++) {
@@ -325,17 +325,15 @@ void test_speed_3() {
     /* For measuring time */
     double t0, t1;
 
-    double sum_a = 0;
-    double sum_b = 0;
-
     const unsigned scale = 500;
     const unsigned n_rows_a = 6 * scale;
     const unsigned n_cols_a = 5 * scale;
 
     double *a = malloc(n_rows_a * n_cols_a * sizeof(*a));
     double *b = malloc(n_rows_a * n_cols_a * sizeof(*b));
+    double *c = malloc(n_rows_a * n_cols_a * sizeof(*c));
 
-    if (!a || !b) {
+    if (!(a && b && c)) {
         printf("Couldn't allocate memory!\n");
         system("pause");
         exit(-1);
@@ -359,7 +357,14 @@ void test_speed_3() {
         b = transpose(a, n_rows_a, n_cols_a, b);
     }
     t1 = omp_get_wtime();
-    printf("transpose(): Elapsed time %.3f s\n", t1 - t0);
+    printf("transpose():           Elapsed time %.3f s\n", t1 - t0);
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        c = transpose_non_tiled(a, n_rows_a, n_cols_a, c);
+    }
+    t1 = omp_get_wtime();
+    printf("transpose_non_tiled(): Elapsed time %.3f s\n", t1 - t0);
 
     if (scale == 1) {
         puts("");
@@ -367,75 +372,129 @@ void test_speed_3() {
         print(a, n_rows_a, n_cols_a);
         printf("Matrix B:\n");
         print(b, n_cols_a, n_rows_a);
+        printf("Matrix C:\n");
+        print(c, n_cols_a, n_rows_a);
     }
 
-    sum_a = sum_array(a, n_rows_a * n_cols_a);
-    sum_b = sum_array(b, n_rows_a * n_cols_a);
+    puts("");
+    printf("Compare (memcmp) transpose() with transpose_non_tiled(): %s\n", compare_memcmp(b, n_rows_a * n_cols_a, c, n_rows_a * n_cols_a) ? "\aDifferent" : "Same");
+    printf("Compare (loop)   transpose() with transpose_non_tiled(): %s\n", compare(b, n_rows_a * n_cols_a, c, n_rows_a * n_cols_a) ? "\aDifferent" : "Same");
+
+    double sum_a = sum_array(a, n_rows_a * n_cols_a);
+    double sum_b = sum_array(b, n_rows_a * n_cols_a);
+    double sum_c = sum_array(c, n_rows_a * n_cols_a);
 
     puts("");
     printf("Sum of A: %f\n", sum_a);
-    printf("Sum of B: %f\n", sum_b);    
+    printf("Sum of B: %f\n", sum_b);
+    printf("Sum of C: %f\n", sum_c);
     printf("Compare sums of A and B: %s\n", compare_scalars(sum_a, sum_b) ? "\aDifferent" : "Same");
+    printf("Compare sums of A and C: %s\n", compare_scalars(sum_a, sum_c) ? "\aDifferent" : "Same");
     puts("");
 
     free(a);
     free(b);
+    free(c);
 }
 
-/* Test speed of init and sum */
+/* Test correctnes and speed of init and sum */
 void test_speed_4() {
     /* For measuring time */
     double t0, t1;
 
-    volatile double sum = 0.;
-
-    const unsigned scale = 2000;
+    const unsigned scale = 1600;
     const unsigned n_rows_a = 6 * scale;
     const unsigned n_cols_a = 5 * scale;
 
     double *a = malloc(n_rows_a * n_cols_a * sizeof(*a));
+    double *b = malloc(n_rows_a * n_cols_a * sizeof(*b));
 
-    if (!a) {
+    if (!(a && b)) {
         printf("Couldn't allocate memory!\n");
         system("pause");
         exit(-1);
     }
 
-    const int rand = 1;
+    int rand = 0;
 
     printf("\nRunning \"test_speed_4\" with %s data...\n\n", rand ? "random" : "sequential");
 
-    const unsigned loop = 1u;
-
-    t0 = omp_get_wtime();
-    for (size_t i = 0; i < loop; i++) {
-        init_rand(a, n_rows_a, n_cols_a);
-    }
-    t1 = omp_get_wtime();
-    printf("init_rand(): Elapsed time %.3f s\n", t1 - t0);
+    const unsigned loop = 10u;
 
     t0 = omp_get_wtime();
     for (size_t i = 0; i < loop; i++) {
         init_seq(a, n_rows_a, n_cols_a);
     }
     t1 = omp_get_wtime();
-    printf("init_seq(): Elapsed time %.3f s\n", t1 - t0);
+    printf("init_seq():       Elapsed time %.3f s\n", t1 - t0);
 
     t0 = omp_get_wtime();
     for (size_t i = 0; i < loop; i++) {
-        sum += sum_array(a, n_rows_a * n_cols_a);
+        init_seq_tiled(b, n_rows_a, n_cols_a);
     }
     t1 = omp_get_wtime();
-    printf("sum(): Elapsed time %.3f s\n", t1 - t0);
+    printf("init_seq_tiled(): Elapsed time %.3f s\n", t1 - t0);
+
+    puts("");
+    printf("Compare (memcmp) init_seq() with init_seq_tiled(): %s\n", compare_memcmp(a, n_rows_a * n_cols_a, b, n_rows_a * n_cols_a) ? "\aDifferent" : "Same");
+    printf("Compare (loop)   init_seq() with init_seq_tiled(): %s\n", compare(a, n_rows_a * n_cols_a, b, n_rows_a * n_cols_a) ? "\aDifferent" : "Same");
+
+    volatile double sum_a = sum_array(a, n_rows_a * n_cols_a);
+    volatile double sum_b = sum_array(b, n_rows_a * n_cols_a);
+    
+    puts("");
+    printf("Sum of A: %f\n", sum_a);
+    printf("Sum of B: %f\n", sum_b);
+    printf("Compare sums of A and B: %s\n", compare_scalars(sum_a, sum_b) ? "\aDifferent" : "Same");
 
     if (scale == 1) {
         puts("");
         printf("Matrix A:\n");
-        print(a, n_rows_a, n_cols_a);        
+        print(a, n_rows_a, n_cols_a);
+        printf("Matrix B:\n");
+        print(b, n_rows_a, n_cols_a);
     }
 
-    printf("\nSum of A: %f\n", sum / loop);
+    rand = 1;
+
+    printf("\nRunning \"test_speed_4\" with %s data...\n\n", rand ? "random" : "sequential");
+
+    sum_a = sum_b = 0;
+    
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        init_rand(a, n_rows_a, n_cols_a);
+    }
+    t1 = omp_get_wtime();
+    printf("init_rand():       Elapsed time %.3f s\n", t1 - t0);
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        init_rand_tiled(b, n_rows_a, n_cols_a);
+    }
+    t1 = omp_get_wtime();
+    printf("init_rand_tiled(): Elapsed time %.3f s\n", t1 - t0);
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        sum_a += sum_array(a, n_rows_a * n_cols_a);
+    }
+    t1 = omp_get_wtime();
+    printf("sum_array():       Elapsed time %.3f s\n", t1 - t0);
+
+    t0 = omp_get_wtime();
+    for (size_t i = 0; i < loop; i++) {
+        sum_b += sum_array_tiled(a, n_rows_a * n_cols_a);
+    }
+    t1 = omp_get_wtime();
+    printf("sum_array_tiled(): Elapsed time %.3f s\n", t1 - t0);
+
+    puts("");
+    printf("Sum of A: %f\n", sum_a / loop);
+    printf("Sum of A: %f\n", sum_b / loop);
+    printf("Compare sums of A and A: %s\n", compare_scalars(sum_a, sum_b) ? "\aDifferent" : "Same");
     puts("");
 
     free(a);
+    free(b);
 }
