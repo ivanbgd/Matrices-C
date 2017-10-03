@@ -1,5 +1,5 @@
-#ifndef TESTS_INCLUDE
-#define TESTS_INCLUDE
+#ifndef TESTS_HEADER
+#define TESTS_HEADER
 
 #include "matrices_1d.h"
 
@@ -22,4 +22,4 @@ void test_speed_3();
    Try with different TILE_ORDER, starting with 1. */
 void test_speed_4();
 
-#endif  // TESTS_INCLUDE
+#endif  // TESTS_HEADER
